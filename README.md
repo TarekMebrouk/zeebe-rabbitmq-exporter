@@ -30,11 +30,12 @@ docker-compose up
 
 1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) `zeebe-distribution-%{VERSION}.tar.gz`
 2. Build JAR of RabbitMQ Zeebe Exporter `mvn clean install`
-3. Copy the exporter JAR into the broker folder `~/zeebe-broker-%{VERSION}/exporters`
+3. Download & start [RabbitMQ](https://www.rabbitmq.com/download.html) server
+4. Copy the exporter JAR into the broker folder `~/zeebe-broker-%{VERSION}/exporters`
     ```
     cp target/zeebe-rabbitmq-exporter-1.0-SNAPSHOT.jar ~/zeebe-broker-%{VERSION}/exporters/
     ```
-4. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
+5. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
     ```
     zeebe:
       broker:  
@@ -43,7 +44,8 @@ docker-compose up
             className: io.zeebe.exporter.rabbitmq.RabbitMqExporter
             jarPath: exporters/zeebe-rabbitmq-exporter-1.0-SNAPSHOT.jar
     ```
-5. Start the broker `~/zeebe-broker-%{VERSION}/bin/broker`
+6. Edit RabbitMQ configurations (host, username, and password) in the Zeebe Exporter environment variables.
+7. Start the broker `~/zeebe-broker-%{VERSION}/bin/broker`
 
 ### Configuration
 
