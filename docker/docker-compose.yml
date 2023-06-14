@@ -1,0 +1,84 @@
+version: "3.0"
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  zeebe_elasticsearch_data:
+  rabbitmq_data:
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - test-network
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    expose:
+      - "5672"
+      - "15672"
+  zeebe:
+    image: camunda/zeebe:8.2.0
+    environment:
+      - ZEEBE_LOG_LEVEL=debug
+      - ZEEBE_RABBITMQ_HOST=rabbitmq
+      - ZEEBE_RABBITMQ_PORT=5672
+      - ZEEBE_RABBITMQ_USERNAME=guest
+      - ZEEBE_RABBITMQ_PASSWORD=guest
+      - ZEEBE_RABBITMQ_QUEUE=zeebe
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+    volumes:
+      - ./volumes/zeebe_data:/usr/local/zeebe/data
+      - ../target/zeebe-rabbitmq-exporter-1.0-SNAPSHOT.jar:/usr/local/zeebe/exporters/zeebe-rabbitmq-exporter-1.0-SNAPSHOT.jar
+      - ./configs/application-zeebe.yaml:/usr/local/zeebe/config/application.yaml
+    depends_on:
+      - elasticsearch
+      - rabbitmq
+    networks:
+      - test-network
+  operate:
+    image: camunda/operate:8.2.0
+    ports:
+      - "8080:8080"
+    depends_on:
+      - zeebe
+      - elasticsearch
+    volumes:
+      - ./configs/application-operate.yml:/usr/local/operate/config/application.yml
+    networks:
+      - test-network
+  tasklist:
+    image: camunda/tasklist:8.2.1
+    ports:
+      - "8081:8080"
+    environment:
+      - CAMUNDA_REST_URL=http://camunda:8080/engine-rest
+      - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      - zeebe
+      - elasticsearch
+    networks:
+      - test-network
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - cluster.name=elasticsearch
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - zeebe_elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - test-network
+
